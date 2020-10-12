@@ -87,6 +87,10 @@ ui <- dashboardPage(
                           h4("Departure Date"),
                           value = "2013-01-01"),
                 
+                sliderInput("month_35", label = h4("Departure Month"), min = 1, 
+                            max = 12, value = c(1,6)),
+            
+                
                 plotOutput("line_35")
                 
                 
@@ -110,5 +114,10 @@ server <- function(input, output) {
         ggplot(day_flights, aes(x=hour, y=count, group=origin)) +
             geom_line(aes(linetype = origin))
     })
+    
+    ggplot(day_flights, aes(x=hour, y=count, group=origin)) +
+        geom_line(aes(linetype = origin))
 }
+    
+
 shinyApp(ui, server)
