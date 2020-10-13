@@ -7,13 +7,34 @@ library(grid)
 
 library(nycflights13)
 
+delay_flights <- flights %>%
+    filter(arr_delay > 0)  %>%
+    summarise(count = n(),
+              delay_med_min = median(arr_delay,na.rm = FALSE),
+              delay_avg_min = mean(arr_delay,na.rm = FALSE)
+    )
+
+all_flights <- flights %>%
+    summarise(all_c = n())   %>% 
+    mutate(delay_per = round((1-delay_flights$count / all_c)*100,1),
+           round(delay_flights["delay_med_min"],digits =1),
+           round(delay_flights["delay_avg_min"],digits =1),
+           delay_flights= delay_flights$count,
+           on_time = length(which(flights["arr_delay"]<=0)),
+           small_delay = length(which(flights["arr_delay"]>0 & flights["arr_delay"]<=15)),
+           medium_delay = length(which(flights["arr_delay"]>15 & flights["arr_delay"]<=45)),
+           large_delay = length(which(flights["arr_delay"]>45 & flights["arr_delay"]<=180)),
+           huge_delay = length(which(flights["arr_delay"]>180))
+    )
+ 
 
 ui <- dashboardPage(
     
-    #1.header
+    #1.header-------------------------------------------------------------------
+    #add nav bar
     dashboardHeader(title = "Basic Dashboard"),
     
-    #2.sidebar
+    #2.sidebar------------------------------------------------------------------
     dashboardSidebar(
         menuItem("Dashboard", icon = icon("dashboard"), tabName = "dashboard"),
         menuItem("Weather", icon = icon("cloud-sun-rain"), tabName = "Weather"),
@@ -26,32 +47,44 @@ ui <- dashboardPage(
     dashboardBody(
         tabItems(
             
-            ##3.1 dashboard
+            ##3.1 dashboard------------------------------------------------------
+            
             tabItem( 
                 
                 tabName = "dashboard",
                 helpText("Throughout this dashboard, we’re going to analyze data related 
                to all domestic flights departing from one of New York City’s three 
                main airports in 2013. We’ll access this data using the nycflights13 R package"),
-                
-                br(),
-                br(),
-                
-                dateInput("date",                       
-                          h4("Date"),
-                          value = "2013-01-01"),
-                
-                
-                
-                fluidRow(
-                    valueBoxOutput("flightsBox"),
-                    valueBoxOutput("ontimeBox"),
-                    valueBoxOutput("delayBox")
+                 
+                br(), 
+                tabsetPanel(
+                    id = "tabset1",
+                    ###3.1.1 by year-----------------------------------------------
+                    tabPanel("By Year", 
+                             fluidRow(
+                                 valueBoxOutput("onTimePerBox"),
+                                 valueBoxOutput("delay_avgminBox"),
+                                 valueBoxOutput("delay_medminBox"))),
+                    
+                    ###3.1.2 by month-----------------------------------------------
+                    tabPanel("By Month", 
+                             sliderInput("month_31", 
+                                         label = h4("Departure Month"), 
+                                         min = 1, 
+                                         max = 12, 
+                                         value = c(1,12))),
+                    
+                    ###3.1.3 by day------------------------------------------------
+                    tabPanel("By Day", 
+                             dateInput("date",                       
+                                       h4("Date"),
+                                       value = "2013-01-01"))
                 )
+            
             ),
             
             
-            ##3.2 Weather
+            ##3.2 Weather--------------------------------------------------------
             tabItem(
                 tabName = "Weather",
                 helpText("Hourly meteorological data for each of the three NYC airports. 
@@ -91,19 +124,50 @@ ui <- dashboardPage(
                             max = 12, value = c(1,6)),
             
                 
-                plotOutput("line_35")
-                
-                
-                
-                
+                plotOutput("line_35"),
+                plotOutput("line_35_2")
             )
-            
         )
     )
 )
+                
+                
+                
+                
+            
+            
+        
+    
+
 
 server <- function(input, output) {
     
+    
+    ##3.1 dashboard--------------------------------------------------------------
+    ###3.1.1 by year
+    output$onTimePerBox <- renderValueBox({ 
+        valueBox(paste0(all_flights$delay_per ,"%"),
+                 "On Time Performance", 
+                 icon = icon("calendar"),
+                 color = "purple")
+    })
+    
+    output$delay_avgminBox <- renderValueBox({
+        valueBox(paste0(all_flights$delay_avg_min ,"min"),
+                 "Average Delay Minutes", 
+                 icon = icon("clock"),
+                 color = "yellow")
+    })
+    
+    output$delay_medminBox <- renderValueBox({
+        valueBox(paste0(all_flights$delay_med_min ,"min"),
+                 "Median Delay minutes", 
+                 icon = icon("clock"),
+                 color = "green")
+    }) 
+    
+    
+    ##3.5 flights----------------------------------------------------------------
     output$line_35 <- renderPlot({ 
         
         day_flights <- flights %>%
@@ -113,10 +177,19 @@ server <- function(input, output) {
         
         ggplot(day_flights, aes(x=hour, y=count, group=origin)) +
             geom_line(aes(linetype = origin))
-    })
+    }) 
     
-    ggplot(day_flights, aes(x=hour, y=count, group=origin)) +
-        geom_line(aes(linetype = origin))
+    output$line_35_2 <- renderPlot({ 
+        
+        month_flights <- flights %>%
+            filter(month >= input$month_35[1], month <= input$month_35) %>%
+            group_by(month,  origin) %>%
+            summarise(count = n()) 
+        
+        ggplot(month_flights, aes(x=month, y=count, group=origin)) +
+            geom_line(aes(linetype = origin))
+    })
+     
 }
     
 
