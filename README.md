@@ -1,6 +1,7 @@
 # shinydashboard-learning
 
 ##2020-10-13
+
 add data wragling process and datafile, speed up calculate 
 
 ##2020-10-12
