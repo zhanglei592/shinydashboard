@@ -1,5 +1,11 @@
 # shinydashboard-learning
 
+
+##2020-10-15
+
+update tab dashboard, add some plots 
+delete unnecessary tabs
+
 ##2020-10-13
 
 add data wragling process and datafile, speed up calculate 
