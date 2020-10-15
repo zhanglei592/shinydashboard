@@ -3,8 +3,7 @@
 
 ##2020-10-15
 
-update tab dashboard, add some plots 
-delete unnecessary tabs
+update tab dashboard, add some plots, and delete unnecessary tabs
 
 ##2020-10-13
 
