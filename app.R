@@ -17,7 +17,7 @@ ui <- dashboardPage(
     
     #1.header-------------------------------------------------------------------
     #add nav bar
-    dashboardHeader(title = "Basic Dashboard"),
+    dashboardHeader(title = "On-Time Performance"),
     
     #2.sidebar------------------------------------------------------------------
     dashboardSidebar(
@@ -38,13 +38,25 @@ ui <- dashboardPage(
                 helpText("Throughout this dashboard, we’re going to analyze data related 
                to all domestic flights departing from one of New York City’s three 
                main airports in 2013. We’ll access this data using the nycflights13 R package"),
+                helpText("A flight is considered delayed when it arrived 15 or more minutes than the schedule.
+                         Delayed minutes are calculated for delayed flights only. 
+                         Data presented summarizes arriving flights only. "),
                  
                 br(), 
                 tabsetPanel(
                     id = "tabset1",
                     ###3.1 by year-----------------------------------------------
                     
-                    tabPanel("By Year", 
+                    tabPanel("Over All", 
+                             br(), 
+                             radioButtons("Airports", 
+                                          choices = list("Three main airports over all" = "All",
+                                                         "Newark Liberty Intl" = "EWR", 
+                                                         "John F Kennedy Intl" = "JFK", 
+                                                         "La Guardia" = "LGA"),
+                                          label = "Choose departure airport",
+                                          inline = TRUE,
+                                          selected = "All"),
                              br(),
                              fluidRow(
                                  valueBoxOutput("onTimePerBox"),
@@ -92,123 +104,148 @@ ui <- dashboardPage(
 )
                 
                 
-                
-                
-            
-            
-        
-    
-
 
 server <- function(input, output) {
     
     
-    ##3.1 dashboard--------------------------------------------------------------
-    ###3.1.1 by year
+
+#3.1 by year---------------------------------------
+    
+    ##valuebox------
     output$onTimePerBox <- renderValueBox({ 
-        valueBox(paste0(all_flights_summary$delay_per ,"%"),
-                 "On Time Performance", 
+        
+        a_all_summary <- all_summary %>%
+            dplyr::filter(
+                if(input$Airports == "All"){
+                    categary == "summary"
+                    } else {
+                        categary == "origin" & sub == input$Airports }) %>% 
+            select(on_time_rate) 
+         
+        valueBox(paste0(a_all_summary$on_time_rate ,"%"),
+                 "On Time Rate", 
                  icon = icon("calendar"),
-                 color = "purple")
+                 color = "purple") 
     })
     
     output$delay_avgminBox <- renderValueBox({
-        valueBox(paste0(all_flights_summary$delay_avg_min ,"min"),
-                 "Average Delay Minutes", 
-                 icon = icon("clock"),
-                 color = "yellow")
+        
+        b_all_summary <- all_summary %>%
+            dplyr::filter(
+                if(input$Airports == "All"){
+                    categary == "summary"
+                    } else {
+                        categary == "origin" & sub == input$Airports }) %>% 
+            select(delay_avg_min) 
+        
+        valueBox(paste0(b_all_summary$delay_avg_min ,"min"),
+                     "Average Delay by Minutes", 
+                     icon = icon("clock"),
+                     color = "yellow")
+        
     })
     
     output$delay_medminBox <- renderValueBox({
-        valueBox(paste0(all_flights_summary$delay_med_min ,"min"),
-                 "Median Delay minutes", 
-                 icon = icon("clock"),
-                 color = "green")
+        
+        c_all_summary <- all_summary %>%
+            dplyr::filter(
+                if(input$Airports == "All"){
+                    categary == "summary"
+                } else {
+                    categary == "origin" & sub == input$Airports }) %>% 
+            select(delay_med_min) 
+        
+        
+            valueBox(paste0(c_all_summary$delay_med_min ,"min"),
+                     "Median Delay by Minutes", 
+                     icon = icon("clock"),
+                     color = "green") 
     }) 
     
+    ##On Time percent plot-------------------------
     output$plot311 <- renderPlot({
         
-        p_month_flights_origin_summary <- month_flights_origin_summary %>%
-            left_join(airports, by = c("origin"="faa"))  
+        a_month_summary <- month_summary %>%
+            dplyr::filter(categary == "origin") 
         
-        ggplot(data = p_month_flights_origin_summary, 
-               mapping = aes(x = month, y = delay_per ,group = name,color = name))  %>%
+        ggplot(data = a_month_summary, 
+               mapping = aes(x = month, y = on_time_rate ,group = name,color = name))  %>%
             + geom_line()   %>%  
             + scale_x_continuous(breaks = c(3,6,9,12)) %>% 
-            + scale_y_continuous(name = "On Time percent", 
-                                 labels = function(delay_per) { paste0(round(delay_per, 1), "%")}) %>%
+            + scale_y_continuous(name = "On Time Rate", 
+                                 labels = function(on_time_rate) { paste0(round(on_time_rate, 1), "%")}) %>%
             + labs(
-                title = "The Proportion of Flights Arriving On Time",
+                title = "Flights Arriving On Time Rate",
                 subtitle = "Departing from New York Airport in 2013", 
                 caption = "datasource: nycflights13" ) %>%
             +theme(legend.position = "top") %>%
             + scale_color_discrete(name = "Airports") 
     })
     
-    
+    ##Median Delay By Minutes plot-----------------
     output$plot312 <- renderPlot({
-        p_month_flights_origin_summary <- month_flights_origin_summary %>%
-            left_join(airports, by = c("origin"="faa"))  
+        a_month_summary <- month_summary %>%
+            dplyr::filter(categary == "origin") 
         
-        ggplot(data = p_month_flights_origin_summary, 
+        ggplot(data = a_month_summary, 
                mapping = aes(x = month, y = delay_med_min,group = name,color = name))  %>%
             + geom_line()   %>%  
             + scale_x_continuous(breaks = c(3,6,9,12)) %>% 
             + scale_y_continuous(name = "Median Delay By Minutes") %>%
             + labs(
-                title = "The Median Delay of Flights By Minutes",
+                title = "Median Delay Per Delayed Arrival By Minutes",
                 subtitle = "Departing from New York Airport in 2013", 
                 caption = "datasource: nycflights13" ) %>%
             +theme(legend.position = "top") %>%
             + scale_color_discrete(name = "Airports")
     })
     
-    output$plot313 <- renderPlot({
+    ##airline flights on time and delay median plot -------------------------
+    output$plot313 <- renderPlot({ 
+        a_month_summary <- month_summary %>%
+            dplyr::filter(categary == "carrier")   
         
-        p_month_flights_carriers_summary <- month_flights_carriers_summary %>%
-            inner_join(airlines, by = "carrier")  
-        
-        
-        ggplot(data = p_month_flights_carriers_summary)  %>%
+        ggplot(data = a_month_summary)  %>%
             + geom_line(aes(
                 y = delay_med_min,
                 x = month))   %>% 
             + geom_line(aes(
-                y = delay_per, 
+                y = on_time_rate, 
                 x = month), color = "blue", linetype = 2) %>% 
             + scale_x_continuous(breaks = c(3,6,9,12))  %>%
             + scale_y_continuous(name = "Median Delay By Minutes", 
-                                 sec.axis = sec_axis(~., name = "On Time percent", 
-                                                     labels = function(delay_per) { paste0(round(delay_per, 1), "%")})) %>%
+                                 sec.axis = sec_axis(~., name = "On Time Rate", 
+                                                     labels = function(on_time_rate) { paste0(round(on_time_rate, 1), "%")})) %>%
             + theme( 
                 axis.title.y.right = element_text(color = "blue")) %>%
             + facet_wrap(~ name, ncol=4) %>%
             + labs(
-                title = "The proportion of airline flights arriving on time and the median delay minutes",
+                title = "Proportion of Airline flights ",
                 subtitle = "Departing from New York Airport in 2013", 
                 caption = "datasource: nycflights13" 
             )
     })
     
+#3.2 by month-------------------------
     
+    ##
     output$line_321 <- renderPlot({ 
         
-        month_flights <- new_flights %>%
-            filter(month >= input$month_321[1], month <= input$month_321[2]) %>%
-            group_by(month,  origin) %>%
-            summarise(count = n()) 
+        month_flights <- month_summary %>%
+            dplyr::filter(month >= input$month_321[1], month <= input$month_321[2],
+                          categary == "origin")  
         
-        ggplot(month_flights, aes(x=month, y=count, group=origin)) +
-            geom_line(aes(linetype = origin))
+        ggplot(month_flights, aes(x=month, y=all_count, group=sub)) +
+            geom_line(aes(linetype = sub))
     })
     
-  
+#3.3 by day-----------------------------
     output$line_331 <- renderPlot({ 
         
         day_flights <- new_flights %>%
-            filter(month == month(input$date_331), day == day(input$date_331)) %>%
-            group_by(month, day, hour, origin) %>%
-            summarise(count = n()) 
+            dplyr::filter(month == month(input$date_331), day == day(input$date_331)) %>%
+            dplyr::group_by(month, day, hour, origin) %>%
+            dplyr::summarise(count = n()) 
         
         ggplot(day_flights, aes(x=hour, y=count, group=origin)) +
             geom_line(aes(linetype = origin))
