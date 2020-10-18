@@ -1,5 +1,7 @@
 # shinydashboard-learning
+##2020-10-19
 
+update data calculations
 
 ##2020-10-15
 
