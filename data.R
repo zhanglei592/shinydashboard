@@ -315,7 +315,7 @@ View(month_summary)
 
 
 
-#4.日汇总表
+#4. daily summary
 ##4.1 daily summary
 day_delay_flights <- new_flights %>%
   dplyr::filter(if_delay == 1)  %>%
@@ -344,8 +344,51 @@ day_flights_summary <- day_flights_summary %>%
 
 View(day_flights_summary) 
 
+#5. flights_with_weather
+flights_with_weather <- new_flights %>%
+  inner_join(weather, by = c("origin", "month", "day","hour")) %>%
+  drop_na(temp)  
 
+flights_with_weather <- flights_with_weather %>%
+  mutate(id = rownames(flights_with_weather)) %>%
+  select(id, month, day, hour, dep_delay, arr_delay, carrier, origin, dest, if_delay, delay_band,
+         temp, dewp, humid, wind_dir, wind_speed, wind_gust, precip, pressure, visib)
+
+flights_with_weather$wind_dir[c(is.na(flights_with_weather$wind_dir) == TRUE)] <- 0
+flights_with_weather$wind_speed[c(is.na(flights_with_weather$wind_speed) == TRUE)] <- 0 
+flights_with_weather$wind_gust[c(is.na(flights_with_weather$wind_gust) == TRUE)] <- 0
+
+View(flights_with_weather) 
+ 
+##save all data to file ----------------------
 save(new_flights, all_summary, 
      month_summary,
-     day_flights_summary, 
+     day_flights_summary, flights_with_weather,
      file = "data.Rdata")
+
+
+write.csv(new_flights,
+          file = "/Users/leizhang/Tableau/new_flights.csv")
+
+write.csv(all_summary,
+          file = "/Users/leizhang/Tableau/all_summary.csv")
+write.csv(month_summary,
+          file = "/Users/leizhang/Tableau/month_summary.csv")
+write.csv(day_flights_summary,
+          file = "/Users/leizhang/Tableau/day_flights_summary.csv")
+write.csv(flights_with_weather,
+          file = "/Users/leizhang/Tableau/flights_with_weather.csv")
+
+
+write.csv(flights,
+          file = "/Users/leizhang/Tableau/flights.csv")
+write.csv(airlines,
+          file = "/Users/leizhang/Tableau/airlines.csv")
+write.csv(airports,
+          file = "/Users/leizhang/Tableau/airports.csv")
+write.csv(planes,
+          file = "/Users/leizhang/Tableau/planes.csv")
+
+
+
+

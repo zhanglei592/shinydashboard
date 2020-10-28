@@ -4,16 +4,17 @@ library(dplyr)
 library(ggplot2) 
 library(lubridate)
 library(grid)
+library(ggiraph)
 
 library(nycflights13)
+library(dashboardthemes)
 load("data.Rdata")
 
 
  
 
 ui <- dashboardPage(
-    
-    skin = "red",
+    skin = "blue",
     
     #1.header-------------------------------------------------------------------
     #add nav bar
@@ -21,13 +22,19 @@ ui <- dashboardPage(
     
     #2.sidebar------------------------------------------------------------------
     dashboardSidebar(
-        menuItem("Dashboard", icon = icon("dashboard"), tabName = "dashboard"),
-        menuItem("Weather", icon = icon("cloud-sun-rain"), tabName = "Weather")
+        sidebarMenu(
+        menuItem("Dashboard", tabName = "dashboard", icon = icon("dashboard")),
+        menuItem("Weather", tabName = "Weather", icon = icon("cloud-sun-rain")))
     ),
     
     #3.body
     dashboardBody(
         
+        ### changing theme
+        shinyDashboardThemes( theme = "grey_light" ),
+        
+        
+        ### body
         tabItems(
             
             ##dashboard------------------------------------------------------
@@ -63,15 +70,15 @@ ui <- dashboardPage(
                                  valueBoxOutput("delay_avgminBox"),
                                  valueBoxOutput("delay_medminBox")),
                              fluidRow(
-                                 box(plotOutput("plot311",  height = 300)),
-                                 box(plotOutput("plot312",  height = 300))),
-                             plotOutput("plot313", height = 600)
+                                 box(plotOutput("plot311",  height = 300),status = "success"),
+                                 box(plotOutput("plot312",  height = 300),status = "warning")),
+                             plotOutput("plot313", height = 600, hover = "red")
                              ),
                     
                     ###3.2 by month-----------------------------------------------
                     tabPanel("By Month", 
                              sliderInput("month_321", 
-                                         label = h4("Departure Month"), 
+                                         label = "Departure Month", 
                                          min = 1, 
                                          max = 12, 
                                          value = c(1,12)),
@@ -81,15 +88,11 @@ ui <- dashboardPage(
                     ###3.3 by day------------------------------------------------
                     tabPanel("By Day", 
                              br(),
-                             dateInput("date_331",h4("Date"),
+                             dateInput("date_331","Date",
                                        value = "2013-01-01"),
                              plotOutput("line_331")
-                             )
-                    
-                    
-                    
-                )
-            
+                             ) 
+                ) 
             ),
             
             
@@ -98,6 +101,7 @@ ui <- dashboardPage(
                 tabName = "Weather",
                 helpText("Hourly meteorological data for each of the three NYC airports. 
                This data frame has 26,115 rows.")
+                
             )
         )
     )
@@ -168,9 +172,8 @@ server <- function(input, output) {
         a_month_summary <- month_summary %>%
             dplyr::filter(categary == "origin") 
         
-        ggplot(data = a_month_summary, 
-               mapping = aes(x = month, y = on_time_rate ,group = name,color = name))  %>%
-            + geom_line()   %>%  
+        ggplot(data = a_month_summary  )  %>%
+            + geom_line( aes(x = month, y = on_time_rate ,group = name,color = name))   %>%  
             + scale_x_continuous(breaks = c(3,6,9,12)) %>% 
             + scale_y_continuous(name = "On Time Rate", 
                                  labels = function(on_time_rate) { paste0(round(on_time_rate, 1), "%")}) %>%
@@ -250,8 +253,6 @@ server <- function(input, output) {
         ggplot(day_flights, aes(x=hour, y=count, group=origin)) +
             geom_line(aes(linetype = origin))
     }) 
-    
-    
      
 }
     
