@@ -32,7 +32,7 @@ new_flights <- new_flights[!new_flights$arr_delay < -1000,]
 
 View(new_flights)
 
-#1.明细表
+#1.new_flights
 new_flights <- new_flights %>%
   mutate(weekdays = weekdays(as.Date(paste(new_flights$year,new_flights$month,new_flights$day,sep = "-"))),
     delay_band = case_when(  arr_delay <15 ~ "on_time", 
@@ -43,8 +43,8 @@ new_flights <- new_flights %>%
 
 View(new_flights)
 
-#2.年度汇总表
-##2.1 总体summary
+#2.yearly
+##2.1 summary
 delay_flights <- new_flights %>%
   dplyr::filter(if_delay == 1)  %>%
   summarise(
@@ -190,7 +190,7 @@ all_summary <- rbind(all_flights_summary,
 View(all_summary)
 
 
-#3.月度汇总表
+#3.monthly
 ##3.1 month summary
 month_delay_flights <- new_flights %>%
   dplyr::filter(if_delay == 1)  %>%
@@ -304,6 +304,35 @@ month_flights_dest_summary <- month_flights_dest_summary %>%
 
 View(month_flights_dest_summary)
 
+##3.5 month summary by carriers&origin
+month_delay_flights_carriers_origin <- new_flights %>%
+  dplyr::filter(if_delay == 1)  %>%
+  dplyr::group_by(month,carrier,origin) %>%
+  summarise( 
+    delay_med_min = median(arr_delay,na.rm = FALSE),
+    delay_avg_min = round(mean(arr_delay,na.rm = FALSE),1))
+
+month_flights_carriers_origin_summary <- new_flights %>%
+  dplyr::group_by(month,carrier,origin) %>%
+  dplyr::summarise(all_count = n())   %>% 
+  inner_join(month_delay_flights_carriers_origin, by = c("month","carrier","origin"))
+
+month_flights_carriers_origin_summary_band <- new_flights %>%
+  dplyr::group_by(month,carrier,origin,delay_band) %>%
+  dplyr::summarise(count = n())   %>%
+  pivot_wider(names_from = "delay_band",
+              values_from = "count")
+
+month_flights_carriers_origin_summary <- month_flights_carriers_origin_summary %>%
+  inner_join(month_flights_carriers_origin_summary_band, by = c("month","carrier","origin")) %>%
+  inner_join(airlines, by = "carrier")  %>%
+  left_join(select(airports, faa,name), by = c("origin"="faa"))  %>%
+  mutate(on_time_rate = ifelse(is.na(on_time),0,round((on_time/all_count)*100,1)),
+         categary = "carrier_origin" ,) %>%
+  dplyr::rename(sub = carrier, carrier_name = name.x, origin_name = name.y)
+
+View(month_flights_carriers_origin_summary)
+
 
 ##merge----------------------------------------------
 month_summary <- rbind(month_flights_summary,
@@ -362,33 +391,8 @@ View(flights_with_weather)
  
 ##save all data to file ----------------------
 save(new_flights, all_summary, 
-     month_summary,
+     month_summary,month_flights_carriers_origin_summary,
      day_flights_summary, flights_with_weather,
      file = "data.Rdata")
 
-
-write.csv(new_flights,
-          file = "/Users/leizhang/Tableau/new_flights.csv")
-
-write.csv(all_summary,
-          file = "/Users/leizhang/Tableau/all_summary.csv")
-write.csv(month_summary,
-          file = "/Users/leizhang/Tableau/month_summary.csv")
-write.csv(day_flights_summary,
-          file = "/Users/leizhang/Tableau/day_flights_summary.csv")
-write.csv(flights_with_weather,
-          file = "/Users/leizhang/Tableau/flights_with_weather.csv")
-
-
-write.csv(flights,
-          file = "/Users/leizhang/Tableau/flights.csv")
-write.csv(airlines,
-          file = "/Users/leizhang/Tableau/airlines.csv")
-write.csv(airports,
-          file = "/Users/leizhang/Tableau/airports.csv")
-write.csv(planes,
-          file = "/Users/leizhang/Tableau/planes.csv")
-
-
-
-
+ 

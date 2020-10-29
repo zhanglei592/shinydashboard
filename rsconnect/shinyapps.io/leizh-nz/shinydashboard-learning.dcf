@@ -5,9 +5,9 @@ account: leizh-nz
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 3044422
-bundleId: 3755972
+bundleId: 3794888
 url: https://leizh-nz.shinyapps.io/shinydashboard-learning/
-when: 1603062589.02622
+when: 1603941213.5754
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: .RData|data.R|README.md|Reference
+ignoredFiles: .RData|README.md|Reference
